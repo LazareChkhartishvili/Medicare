@@ -57,6 +57,7 @@ export default function TabLayout() {
         name="appointment"
         options={{
           title: "Appointment",
+          headerShown: false,
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="calendar-outline" size={size} color={color} />
           ),

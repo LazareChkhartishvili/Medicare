@@ -74,18 +74,7 @@ const TopDoctors = () => {
 
   return (
     <View style={styles.container}>
-      <TouchableOpacity
-        style={{
-          flexDirection: "row",
-          alignItems: "center",
-          gap: 8,
-          justifyContent: "space-between",
-          width: "100%",
-        }}
-        onPress={() => router.push("/screens/doctors/topdoctors")}
-      >
-        <SeeAll title="Top Rated Doctors" />
-      </TouchableOpacity>
+      <SeeAll title="Top Rated Doctors" route="/screens/doctors/topdoctors" />
       <DoctorFilters
         selectedFilter={selectedFilter}
         onFilterChange={setSelectedFilter}

@@ -51,23 +51,16 @@ const Departments = () => {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity
-          style={{
-            flexDirection: "row",
-            alignItems: "center",
-            gap: 8,
-            justifyContent: "space-between",
-            width: "100%",
-          }}
-          onPress={() => router.push("/screens/doctors/departments")}
-        >
-          <SeeAll title="Departments" />
-        </TouchableOpacity>
+        <SeeAll title="Departments" route="/screens/doctors/departments" />
       </View>
 
       <View style={styles.grid}>
         {departments.map((dept, index) => (
-          <TouchableOpacity key={index} style={styles.departmentCard}>
+          <TouchableOpacity 
+            key={index} 
+            style={styles.departmentCard}
+            onPress={() => router.push(`/screens/doctors/doctors-list?specialty=${dept.name.toLowerCase()}`)}
+          >
             <View
               style={[
                 styles.iconContainer,

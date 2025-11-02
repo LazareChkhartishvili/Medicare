@@ -102,7 +102,11 @@ const DepartmentsScreen = () => {
       <ScrollView style={styles.content}>
         <View style={styles.grid}>
           {departments.slice(0, 12).map((dept, index) => (
-            <TouchableOpacity key={index} style={styles.departmentCard}>
+            <TouchableOpacity 
+              key={index} 
+              style={styles.departmentCard}
+              onPress={() => router.push(`/screens/doctors/doctors-list?specialty=${dept.name.toLowerCase()}`)}
+            >
               <View
                 style={[
                   styles.iconContainer,
