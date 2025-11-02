@@ -1,0 +1,1036 @@
+import Ionicons from "@expo/vector-icons/Ionicons";
+import { useState } from "react";
+import {
+  Modal,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { useSchedule } from "../contexts/ScheduleContext";
+
+const AVAILABLE_HOURS = [
+  "09:00",
+  "10:00",
+  "11:00",
+  "12:00",
+  "14:00",
+  "15:00",
+  "16:00",
+  "17:00",
+  "18:00",
+];
+
+export default function DoctorSchedule() {
+  const { schedules, selectedDates, setSchedules, setSelectedDates } =
+    useSchedule();
+  const [showTimeModal, setShowTimeModal] = useState(false);
+  const [currentEditDate, setCurrentEditDate] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveSuccess, setSaveSuccess] = useState(false);
+  const [hasSaved, setHasSaved] = useState(false);
+
+  // Generate calendar by months
+  const generateCalendarByMonths = () => {
+    const today = new Date();
+    const currentMonth = today.getMonth();
+    const currentYear = today.getFullYear();
+
+    // Current month days (from today onwards)
+    const currentMonthDays = [];
+    const daysInCurrentMonth = new Date(
+      currentYear,
+      currentMonth + 1,
+      0
+    ).getDate();
+    for (let day = today.getDate(); day <= daysInCurrentMonth; day++) {
+      currentMonthDays.push(new Date(currentYear, currentMonth, day));
+    }
+
+    // Next month days (all days)
+    const nextMonth = currentMonth + 1;
+    const nextYear = nextMonth > 11 ? currentYear + 1 : currentYear;
+    const nextMonthValue = nextMonth > 11 ? 0 : nextMonth;
+    const nextMonthDays = [];
+    const daysInNextMonth = new Date(nextYear, nextMonthValue + 1, 0).getDate();
+    for (let day = 1; day <= daysInNextMonth; day++) {
+      nextMonthDays.push(new Date(nextYear, nextMonthValue, day));
+    }
+
+    return {
+      currentMonth: {
+        name: today.toLocaleDateString("ka-GE", {
+          month: "long",
+          year: "numeric",
+        }),
+        days: currentMonthDays,
+      },
+      nextMonth: {
+        name: new Date(nextYear, nextMonthValue, 1).toLocaleDateString(
+          "ka-GE",
+          {
+            month: "long",
+            year: "numeric",
+          }
+        ),
+        days: nextMonthDays,
+      },
+    };
+  };
+
+  const calendar = generateCalendarByMonths();
+
+  const getDayName = (date: Date) => {
+    const days = [
+      "კვირა",
+      "ორშაბათი",
+      "სამშაბათი",
+      "ოთხშაბათი",
+      "ხუთშაბათი",
+      "პარასკევი",
+      "შაბათი",
+    ];
+    return days[date.getDay()];
+  };
+
+  const formatDate = (date: Date) => {
+    return date.toISOString().split("T")[0];
+  };
+
+  const isDateSelected = (date: Date) => {
+    return selectedDates.includes(formatDate(date));
+  };
+
+  const toggleDateSelection = (date: Date) => {
+    const dateStr = formatDate(date);
+    if (selectedDates.includes(dateStr)) {
+      setSelectedDates(selectedDates.filter((d) => d !== dateStr));
+      // Remove schedule for this date
+      const newSchedules = { ...schedules };
+      delete newSchedules[dateStr];
+      setSchedules(newSchedules);
+    } else {
+      setSelectedDates([...selectedDates, dateStr]);
+      setHasSaved(false); // Reset hasSaved when new date is selected
+    }
+  };
+
+  const openTimeSelector = (date: Date) => {
+    setCurrentEditDate(formatDate(date));
+    setShowTimeModal(true);
+  };
+
+  const toggleTimeSlot = (time: string) => {
+    if (!currentEditDate) return;
+
+    const currentSlots = schedules[currentEditDate] || [];
+    let newSlots;
+
+    if (currentSlots.includes(time)) {
+      newSlots = currentSlots.filter((t) => t !== time);
+    } else {
+      newSlots = [...currentSlots, time].sort();
+    }
+
+    setSchedules({
+      ...schedules,
+      [currentEditDate]: newSlots,
+    });
+
+    // Reset hasSaved when slots are modified
+    setHasSaved(false);
+  };
+
+  const saveSchedule = async () => {
+    setIsSaving(true);
+
+    // Simulate API call
+    await new Promise((resolve) => setTimeout(resolve, 1500));
+
+    // TODO: Save to backend
+    console.log("Saving schedules:", schedules);
+
+    setIsSaving(false);
+    setSaveSuccess(true);
+    setHasSaved(true); // Mark as saved
+
+    // Hide success message after 2 seconds
+    setTimeout(() => {
+      setSaveSuccess(false);
+    }, 2000);
+  };
+
+  const isToday = (date: Date) => {
+    const today = new Date();
+    return (
+      date.getDate() === today.getDate() &&
+      date.getMonth() === today.getMonth() &&
+      date.getFullYear() === today.getFullYear()
+    );
+  };
+
+  // Check if all selected dates have at least one time slot
+  const allDatesHaveSlots = () => {
+    return selectedDates.every((dateStr) => {
+      const slots = schedules[dateStr];
+      return slots && slots.length > 0;
+    });
+  };
+
+  return (
+    <SafeAreaView style={styles.container}>
+      <ScrollView showsVerticalScrollIndicator={false}>
+        {/* Header */}
+        <View style={styles.header}>
+          <View>
+            <Text style={styles.title}>განრიგის დაგეგმვა</Text>
+            <Text style={styles.subtitle}>
+              აირჩიეთ დღეები და საათები თქვენი ხელმისაწვდომობისთვის
+            </Text>
+          </View>
+        </View>
+
+        {/* Instructions */}
+        <View style={styles.instructionsCard}>
+          <View style={styles.instructionIconContainer}>
+            <Ionicons name="information-circle" size={24} color="#06B6D4" />
+          </View>
+          <View style={styles.instructionContent}>
+            <Text style={styles.instructionTitle}>როგორ გამოვიყენოთ?</Text>
+            <Text style={styles.instructionText}>
+              1. აირჩიეთ დღეები კალენდარიდან{"\n"}2. თითოეულ დღეს დააჭირეთ
+              საათების შესარჩევად{"\n"}3. შეინახეთ თქვენი განრიგი
+            </Text>
+          </View>
+        </View>
+
+        {/* Selected Days Summary */}
+        {selectedDates.length > 0 && (
+          <View style={styles.summaryCard}>
+            <View style={styles.summaryHeader}>
+              <Text style={styles.summaryTitle}>
+                არჩეული დღეები: {selectedDates.length}
+              </Text>
+              <TouchableOpacity
+                onPress={() => {
+                  setSelectedDates([]);
+                  setSchedules({});
+                }}
+              >
+                <Text style={styles.clearText}>გასუფთავება</Text>
+              </TouchableOpacity>
+            </View>
+            <View style={styles.summaryStats}>
+              <View style={styles.statItem}>
+                <Ionicons name="checkmark-circle" size={20} color="#10B981" />
+                <Text style={styles.statText}>
+                  {
+                    Object.values(schedules).filter((slots) => slots.length > 0)
+                      .length
+                  }{" "}
+                  კონფიგურირებული
+                </Text>
+              </View>
+              <View style={styles.statItem}>
+                <Ionicons
+                  name={
+                    allDatesHaveSlots()
+                      ? "checkmark-done-circle"
+                      : "alert-circle"
+                  }
+                  size={20}
+                  color={allDatesHaveSlots() ? "#10B981" : "#EF4444"}
+                />
+                <Text
+                  style={[
+                    styles.statText,
+                    !allDatesHaveSlots() && { color: "#EF4444" },
+                  ]}
+                >
+                  {
+                    selectedDates.filter(
+                      (d) => !schedules[d] || schedules[d].length === 0
+                    ).length
+                  }{" "}
+                  {allDatesHaveSlots() ? "მზადაა შესანახად" : "საათების გარეშე"}
+                </Text>
+              </View>
+            </View>
+          </View>
+        )}
+
+        {/* Calendar */}
+        <View style={styles.calendarSection}>
+          {/* Current Month */}
+          <View style={styles.monthSection}>
+            <View style={styles.monthHeader}>
+              <Ionicons name="calendar" size={20} color="#06B6D4" />
+              <Text style={styles.monthTitle}>
+                {calendar.currentMonth.name}
+              </Text>
+              <View style={styles.monthBadge}>
+                <Text style={styles.monthBadgeText}>
+                  {calendar.currentMonth.days.length} დღე
+                </Text>
+              </View>
+            </View>
+            <View style={styles.calendarGrid}>
+              {calendar.currentMonth.days.map((date, index) => {
+                const isSelected = isDateSelected(date);
+                const dateStr = formatDate(date);
+                const hasSchedule = schedules[dateStr]?.length > 0;
+                const today = isToday(date);
+
+                return (
+                  <View key={index} style={styles.dateWrapper}>
+                    <TouchableOpacity
+                      style={[
+                        styles.dateCard,
+                        isSelected && styles.dateCardSelected,
+                        today && styles.dateCardToday,
+                      ]}
+                      onPress={() => toggleDateSelection(date)}
+                    >
+                      {today && (
+                        <View style={styles.todayBadge}>
+                          <Text style={styles.todayBadgeText}>დღეს</Text>
+                        </View>
+                      )}
+                      <Text
+                        style={[
+                          styles.dateDayName,
+                          isSelected && styles.dateTextSelected,
+                        ]}
+                      >
+                        {getDayName(date)}
+                      </Text>
+                      <Text
+                        style={[
+                          styles.dateNumber,
+                          isSelected && styles.dateTextSelected,
+                        ]}
+                      >
+                        {date.getDate()}
+                      </Text>
+                      {isSelected && (
+                        <View style={styles.checkMark}>
+                          <Ionicons
+                            name="checkmark"
+                            size={16}
+                            color="#FFFFFF"
+                          />
+                        </View>
+                      )}
+                    </TouchableOpacity>
+                    {isSelected && (
+                      <TouchableOpacity
+                        style={styles.configureButton}
+                        onPress={() => openTimeSelector(date)}
+                      >
+                        <Ionicons
+                          name={hasSchedule ? "create" : "time-outline"}
+                          size={16}
+                          color="#FFFFFF"
+                        />
+                        <Text style={styles.configureButtonText}>
+                          {hasSchedule
+                            ? `${schedules[dateStr].length} საათი`
+                            : "საათის არჩევა"}
+                        </Text>
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                );
+              })}
+            </View>
+          </View>
+
+          {/* Next Month */}
+          <View style={styles.monthSection}>
+            <View style={styles.monthHeader}>
+              <Ionicons name="calendar-outline" size={20} color="#10B981" />
+              <Text style={styles.monthTitle}>{calendar.nextMonth.name}</Text>
+              <View
+                style={[styles.monthBadge, { backgroundColor: "#10B98120" }]}
+              >
+                <Text style={[styles.monthBadgeText, { color: "#10B981" }]}>
+                  {calendar.nextMonth.days.length} დღე
+                </Text>
+              </View>
+            </View>
+            <View style={styles.calendarGrid}>
+              {calendar.nextMonth.days.map((date, index) => {
+                const isSelected = isDateSelected(date);
+                const dateStr = formatDate(date);
+                const hasSchedule = schedules[dateStr]?.length > 0;
+
+                return (
+                  <View key={index} style={styles.dateWrapper}>
+                    <TouchableOpacity
+                      style={[
+                        styles.dateCard,
+                        isSelected && styles.dateCardSelected,
+                      ]}
+                      onPress={() => toggleDateSelection(date)}
+                    >
+                      <Text
+                        style={[
+                          styles.dateDayName,
+                          isSelected && styles.dateTextSelected,
+                        ]}
+                      >
+                        {getDayName(date)}
+                      </Text>
+                      <Text
+                        style={[
+                          styles.dateNumber,
+                          isSelected && styles.dateTextSelected,
+                        ]}
+                      >
+                        {date.getDate()}
+                      </Text>
+                      {isSelected && (
+                        <View style={styles.checkMark}>
+                          <Ionicons
+                            name="checkmark"
+                            size={16}
+                            color="#FFFFFF"
+                          />
+                        </View>
+                      )}
+                    </TouchableOpacity>
+                    {isSelected && (
+                      <TouchableOpacity
+                        style={styles.configureButton}
+                        onPress={() => openTimeSelector(date)}
+                      >
+                        <Ionicons
+                          name={hasSchedule ? "create" : "time-outline"}
+                          size={16}
+                          color="#FFFFFF"
+                        />
+                        <Text style={styles.configureButtonText}>
+                          {hasSchedule
+                            ? `${schedules[dateStr].length} საათი`
+                            : "საათის არჩევა"}
+                        </Text>
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                );
+              })}
+            </View>
+          </View>
+        </View>
+      </ScrollView>
+
+      {/* Floating Save Button */}
+      {selectedDates.length > 0 &&
+        allDatesHaveSlots() &&
+        !saveSuccess &&
+        !hasSaved && (
+          <TouchableOpacity
+            style={[
+              styles.floatingButton,
+              isSaving && styles.floatingButtonSaving,
+            ]}
+            onPress={saveSchedule}
+            activeOpacity={0.8}
+            disabled={isSaving}
+          >
+            {isSaving ? (
+              <View style={styles.floatingButtonContent}>
+                <View style={styles.loadingSpinner}>
+                  <Ionicons name="hourglass" size={28} color="#FFFFFF" />
+                </View>
+                <View style={styles.floatingButtonTextContainer}>
+                  <Text style={styles.floatingButtonText}>შენახვა...</Text>
+                  <Text style={styles.floatingButtonSubtext}>
+                    გთხოვთ დაელოდოთ
+                  </Text>
+                </View>
+              </View>
+            ) : (
+              <View style={styles.floatingButtonContent}>
+                <View style={styles.iconContainer}>
+                  <Ionicons name="save-outline" size={24} color="#FFFFFF" />
+                </View>
+                <View style={styles.floatingButtonTextContainer}>
+                  <Text style={styles.floatingButtonText}>
+                    განრიგის შენახვა
+                  </Text>
+                  <Text style={styles.floatingButtonSubtext}>
+                    {selectedDates.length} დღე •{" "}
+                    {Object.values(schedules).reduce(
+                      (sum, slots) => sum + slots.length,
+                      0
+                    )}{" "}
+                    საათი
+                  </Text>
+                </View>
+                <Ionicons
+                  name="arrow-forward-circle"
+                  size={28}
+                  color="rgba(255, 255, 255, 0.8)"
+                />
+              </View>
+            )}
+          </TouchableOpacity>
+        )}
+
+      {/* Success Message */}
+      {saveSuccess && (
+        <View style={styles.successMessage}>
+          <View style={styles.successContent}>
+            <View style={styles.successIconContainer}>
+              <Ionicons name="checkmark-circle" size={48} color="#10B981" />
+            </View>
+            <Text style={styles.successTitle}>წარმატებით შეინახა!</Text>
+            <Text style={styles.successSubtitle}>თქვენი განრიგი განახლდა</Text>
+          </View>
+        </View>
+      )}
+
+      {/* Time Selector Modal */}
+      <Modal
+        visible={showTimeModal}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setShowTimeModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>საათების არჩევა</Text>
+              <TouchableOpacity
+                style={styles.closeButton}
+                onPress={() => setShowTimeModal(false)}
+              >
+                <Ionicons name="close" size={24} color="#6B7280" />
+              </TouchableOpacity>
+            </View>
+
+            {currentEditDate && (
+              <View style={styles.modalDateInfo}>
+                <Ionicons name="calendar" size={20} color="#06B6D4" />
+                <Text style={styles.modalDateText}>
+                  {new Date(currentEditDate).toLocaleDateString("ka-GE", {
+                    weekday: "long",
+                    year: "numeric",
+                    month: "long",
+                    day: "numeric",
+                  })}
+                </Text>
+              </View>
+            )}
+
+            <ScrollView style={styles.timeSlotsList}>
+              <View style={styles.timeGrid}>
+                {AVAILABLE_HOURS.map((time) => {
+                  const isSelected =
+                    currentEditDate &&
+                    schedules[currentEditDate]?.includes(time);
+
+                  return (
+                    <TouchableOpacity
+                      key={time}
+                      style={[
+                        styles.timeSlot,
+                        isSelected && styles.timeSlotSelected,
+                      ]}
+                      onPress={() => toggleTimeSlot(time)}
+                    >
+                      <Ionicons
+                        name={isSelected ? "checkmark-circle" : "time-outline"}
+                        size={24}
+                        color={isSelected ? "#FFFFFF" : "#06B6D4"}
+                      />
+                      <Text
+                        style={[
+                          styles.timeSlotText,
+                          isSelected && styles.timeSlotTextSelected,
+                        ]}
+                      >
+                        {time}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </ScrollView>
+
+            <View style={styles.modalFooter}>
+              <TouchableOpacity
+                style={styles.selectAllButton}
+                onPress={() => {
+                  if (currentEditDate) {
+                    const currentSlots = schedules[currentEditDate] || [];
+                    if (currentSlots.length === AVAILABLE_HOURS.length) {
+                      // Deselect all
+                      setSchedules({
+                        ...schedules,
+                        [currentEditDate]: [],
+                      });
+                    } else {
+                      // Select all
+                      setSchedules({
+                        ...schedules,
+                        [currentEditDate]: [...AVAILABLE_HOURS],
+                      });
+                    }
+                  }
+                }}
+              >
+                <Text style={styles.selectAllText}>
+                  {currentEditDate &&
+                  schedules[currentEditDate]?.length === AVAILABLE_HOURS.length
+                    ? "ყველას მოხსნა"
+                    : "ყველას არჩევა"}
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.doneButton}
+                onPress={() => setShowTimeModal(false)}
+              >
+                <Text style={styles.doneButtonText}>მზადაა</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+    </SafeAreaView>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: "#F8F9FA",
+  },
+  header: {
+    paddingHorizontal: 20,
+    paddingTop: 10,
+    paddingBottom: 20,
+  },
+  title: {
+    fontSize: 28,
+    fontFamily: "Poppins-Bold",
+    color: "#1F2937",
+    marginBottom: 4,
+  },
+  subtitle: {
+    fontSize: 14,
+    fontFamily: "Poppins-Regular",
+    color: "#6B7280",
+  },
+  instructionsCard: {
+    flexDirection: "row",
+    backgroundColor: "#F0FDFA",
+    marginHorizontal: 20,
+    marginBottom: 24,
+    padding: 16,
+    borderRadius: 16,
+    borderLeftWidth: 4,
+    borderLeftColor: "#06B6D4",
+  },
+  instructionIconContainer: {
+    marginRight: 12,
+  },
+  instructionContent: {
+    flex: 1,
+  },
+  instructionTitle: {
+    fontSize: 14,
+    fontFamily: "Poppins-SemiBold",
+    color: "#1F2937",
+    marginBottom: 4,
+  },
+  instructionText: {
+    fontSize: 12,
+    fontFamily: "Poppins-Regular",
+    color: "#6B7280",
+    lineHeight: 18,
+  },
+  summaryCard: {
+    backgroundColor: "#FFFFFF",
+    marginHorizontal: 20,
+    marginBottom: 24,
+    padding: 16,
+    borderRadius: 16,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  summaryHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 12,
+  },
+  summaryTitle: {
+    fontSize: 16,
+    fontFamily: "Poppins-SemiBold",
+    color: "#1F2937",
+  },
+  clearText: {
+    fontSize: 14,
+    fontFamily: "Poppins-Medium",
+    color: "#EF4444",
+  },
+  summaryStats: {
+    flexDirection: "row",
+    gap: 16,
+  },
+  statItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  statText: {
+    fontSize: 13,
+    fontFamily: "Poppins-Medium",
+    color: "#6B7280",
+  },
+  calendarSection: {
+    paddingHorizontal: 20,
+    marginBottom: 24,
+  },
+  sectionTitle: {
+    fontSize: 20,
+    fontFamily: "Poppins-Bold",
+    color: "#1F2937",
+    marginBottom: 16,
+  },
+  monthSection: {
+    marginBottom: 32,
+  },
+  monthHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 16,
+    paddingBottom: 12,
+    borderBottomWidth: 2,
+    borderBottomColor: "#E5E7EB",
+  },
+  monthTitle: {
+    flex: 1,
+    fontSize: 18,
+    fontFamily: "Poppins-Bold",
+    color: "#1F2937",
+  },
+  monthBadge: {
+    backgroundColor: "#06B6D420",
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  monthBadgeText: {
+    fontSize: 12,
+    fontFamily: "Poppins-SemiBold",
+    color: "#06B6D4",
+  },
+  calendarGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 12,
+  },
+  dateWrapper: {
+    width: "31%",
+    marginBottom: 8,
+  },
+  dateCard: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 12,
+    padding: 12,
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 3,
+    borderWidth: 2,
+    borderColor: "#F3F4F6",
+    position: "relative",
+  },
+  dateCardSelected: {
+    backgroundColor: "#06B6D4",
+    borderColor: "#06B6D4",
+  },
+  dateCardToday: {
+    borderColor: "#F59E0B",
+  },
+  todayBadge: {
+    position: "absolute",
+    top: 4,
+    right: 4,
+    backgroundColor: "#F59E0B",
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  todayBadgeText: {
+    fontSize: 8,
+    fontFamily: "Poppins-Bold",
+    color: "#FFFFFF",
+  },
+  dateDayName: {
+    fontSize: 10,
+    fontFamily: "Poppins-Medium",
+    color: "#6B7280",
+    marginBottom: 4,
+  },
+  dateNumber: {
+    fontSize: 24,
+    fontFamily: "Poppins-Bold",
+    color: "#1F2937",
+    marginBottom: 2,
+  },
+  dateMonth: {
+    fontSize: 11,
+    fontFamily: "Poppins-Regular",
+    color: "#9CA3AF",
+  },
+  dateTextSelected: {
+    color: "#FFFFFF",
+  },
+  checkMark: {
+    position: "absolute",
+    top: 4,
+    left: 4,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: "rgba(255, 255, 255, 0.3)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  configureButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 4,
+    backgroundColor: "#10B981",
+    paddingVertical: 6,
+    paddingHorizontal: 8,
+    borderRadius: 8,
+    marginTop: 6,
+  },
+  configureButtonText: {
+    fontSize: 11,
+    fontFamily: "Poppins-SemiBold",
+    color: "#FFFFFF",
+  },
+  floatingButton: {
+    position: "absolute",
+    bottom: 20,
+    left: 20,
+    right: 20,
+    backgroundColor: "#06B6D4",
+    borderRadius: 24,
+    paddingVertical: 18,
+    paddingHorizontal: 24,
+    shadowColor: "#06B6D4",
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.5,
+    shadowRadius: 20,
+    elevation: 10,
+    borderWidth: 2,
+    borderColor: "rgba(255, 255, 255, 0.2)",
+  },
+  floatingButtonSaving: {
+    backgroundColor: "#F59E0B",
+    shadowColor: "#F59E0B",
+  },
+  floatingButtonContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 14,
+  },
+  iconContainer: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: "rgba(255, 255, 255, 0.2)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  loadingSpinner: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: "rgba(255, 255, 255, 0.2)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  floatingButtonTextContainer: {
+    flex: 1,
+  },
+  floatingButtonText: {
+    fontSize: 17,
+    fontFamily: "Poppins-Bold",
+    color: "#FFFFFF",
+    marginBottom: 2,
+    letterSpacing: 0.3,
+  },
+  floatingButtonSubtext: {
+    fontSize: 12,
+    fontFamily: "Poppins-Medium",
+    color: "rgba(255, 255, 255, 0.95)",
+  },
+  successMessage: {
+    position: "absolute",
+    bottom: 20,
+    left: 20,
+    right: 20,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 24,
+    padding: 28,
+    shadowColor: "#10B981",
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.3,
+    shadowRadius: 20,
+    elevation: 10,
+    borderWidth: 2,
+    borderColor: "#10B981",
+  },
+  successContent: {
+    alignItems: "center",
+  },
+  successIconContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: "#10B98115",
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 16,
+  },
+  successTitle: {
+    fontSize: 20,
+    fontFamily: "Poppins-Bold",
+    color: "#10B981",
+    marginBottom: 6,
+    textAlign: "center",
+  },
+  successSubtitle: {
+    fontSize: 14,
+    fontFamily: "Poppins-Medium",
+    color: "#6B7280",
+    textAlign: "center",
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "flex-end",
+  },
+  modalContent: {
+    backgroundColor: "#FFFFFF",
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingTop: 20,
+    paddingBottom: 40,
+    maxHeight: "80%",
+  },
+  modalHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: 20,
+    marginBottom: 16,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontFamily: "Poppins-Bold",
+    color: "#1F2937",
+  },
+  closeButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "#F3F4F6",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  modalDateInfo: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: "#F0FDFA",
+    marginHorizontal: 20,
+    padding: 12,
+    borderRadius: 12,
+    marginBottom: 16,
+  },
+  modalDateText: {
+    flex: 1,
+    fontSize: 14,
+    fontFamily: "Poppins-Medium",
+    color: "#1F2937",
+  },
+  timeSlotsList: {
+    paddingHorizontal: 20,
+  },
+  timeGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 12,
+  },
+  timeSlot: {
+    width: "47%",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: "#F9FAFB",
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: "#E5E7EB",
+  },
+  timeSlotSelected: {
+    backgroundColor: "#06B6D4",
+    borderColor: "#06B6D4",
+  },
+  timeSlotText: {
+    fontSize: 16,
+    fontFamily: "Poppins-SemiBold",
+    color: "#1F2937",
+  },
+  timeSlotTextSelected: {
+    color: "#FFFFFF",
+  },
+  modalFooter: {
+    flexDirection: "row",
+    gap: 12,
+    paddingHorizontal: 20,
+    marginTop: 20,
+  },
+  selectAllButton: {
+    flex: 1,
+    backgroundColor: "#F3F4F6",
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: "center",
+  },
+  selectAllText: {
+    fontSize: 14,
+    fontFamily: "Poppins-SemiBold",
+    color: "#1F2937",
+  },
+  doneButton: {
+    flex: 1,
+    backgroundColor: "#06B6D4",
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: "center",
+  },
+  doneButtonText: {
+    fontSize: 14,
+    fontFamily: "Poppins-SemiBold",
+    color: "#FFFFFF",
+  },
+});
