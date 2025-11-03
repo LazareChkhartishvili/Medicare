@@ -11,7 +11,10 @@ const Services = () => {
           <View style={styles.serviceCard}>
             <Image
               style={{ width: 97, height: 97, borderRadius: 8 }}
-              source={require("../../../assets/images/test.png")}
+              source={{
+                uri: "https://images.unsplash.com/photo-1629909613654-28e377c37b09?w=400&h=400&fit=crop&crop=center"
+              }}
+              contentFit="cover"
             />
             <Text style={styles.serviceTitle}>Instant Consultation </Text>
             <Text style={styles.serviceDescription}>Start from $50</Text>
@@ -19,7 +22,10 @@ const Services = () => {
           <View style={styles.serviceCard}>
             <Image
               style={{ width: 97, height: 97, borderRadius: 8 }}
-              source={require("../../../assets/images/test.png")}
+              source={{
+                uri: "https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?w=400&h=400&fit=crop&crop=center"
+              }}
+              contentFit="cover"
             />
             <Text style={styles.serviceTitle}>Book a Specialist</Text>
             <Text style={styles.serviceDescription}>Start from $100</Text>
@@ -27,7 +33,10 @@ const Services = () => {
           <View style={styles.serviceCard}>
             <Image
               style={{ width: 97, height: 97, borderRadius: 8 }}
-              source={require("../../../assets/images/test.png")}
+              source={{
+                uri: "https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=400&h=400&fit=crop&crop=center"
+              }}
+              contentFit="cover"
             />
             <Text style={styles.serviceTitle}>Order Medicine</Text>
             <Text style={styles.serviceDescription}>Delivery in 1 hour</Text>
