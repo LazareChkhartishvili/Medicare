@@ -3,6 +3,7 @@ import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import {
+  Image,
   Modal,
   ScrollView,
   StyleSheet,
@@ -30,7 +31,24 @@ export default function DoctorAppointments() {
     useState<Consultation | null>(null);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [showFollowUpModal, setShowFollowUpModal] = useState(false);
+  const [showAppointmentModal, setShowAppointmentModal] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [currentTime, setCurrentTime] = useState(new Date());
+
+  // Appointment form state
+  const [appointmentData, setAppointmentData] = useState({
+    diagnosis: "",
+    symptoms: "",
+    bloodPressure: "",
+    heartRate: "",
+    temperature: "",
+    weight: "",
+    medications: "",
+    followUpRequired: false,
+    followUpDate: "",
+    followUpReason: "",
+    notes: "",
+  });
 
   // Update current time every minute for countdown
   useEffect(() => {
@@ -43,15 +61,17 @@ export default function DoctorAppointments() {
 
   // Function to calculate time until consultation
   const getTimeUntilConsultation = (consultation: Consultation) => {
-    const consultationDateTime = new Date(`${consultation.date}T${consultation.time}`);
+    const consultationDateTime = new Date(
+      `${consultation.date}T${consultation.time}`
+    );
     const diff = consultationDateTime.getTime() - currentTime.getTime();
-    
+
     if (diff < 0) return null; // Past consultation
-    
+
     const hours = Math.floor(diff / (1000 * 60 * 60));
     const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
     const days = Math.floor(hours / 24);
-    
+
     if (days > 0) {
       return `${days} დღეში`;
     } else if (hours > 0) {
@@ -65,7 +85,9 @@ export default function DoctorAppointments() {
 
   // Check if consultation is starting soon (within 30 minutes)
   const isConsultationSoon = (consultation: Consultation) => {
-    const consultationDateTime = new Date(`${consultation.date}T${consultation.time}`);
+    const consultationDateTime = new Date(
+      `${consultation.date}T${consultation.time}`
+    );
     const diff = consultationDateTime.getTime() - currentTime.getTime();
     return diff > 0 && diff <= 30 * 60 * 1000; // 30 minutes
   };
@@ -99,6 +121,39 @@ export default function DoctorAppointments() {
   const openFollowUp = (consultation: Consultation) => {
     setSelectedConsultation(consultation);
     setShowFollowUpModal(true);
+  };
+
+  const openAppointment = (consultation: Consultation) => {
+    setSelectedConsultation(consultation);
+    setShowAppointmentModal(true);
+  };
+
+  const handleSaveAppointment = () => {
+    // Validate required fields
+    if (!appointmentData.diagnosis.trim()) {
+      alert("გთხოვთ შეიყვანოთ დიაგნოზი");
+      return;
+    }
+
+    console.log("Saving appointment data:", appointmentData);
+    // Here you would save to backend
+    setShowAppointmentModal(false);
+    setShowSuccessModal(true);
+
+    // Reset form
+    setAppointmentData({
+      diagnosis: "",
+      symptoms: "",
+      bloodPressure: "",
+      heartRate: "",
+      temperature: "",
+      weight: "",
+      medications: "",
+      followUpRequired: false,
+      followUpDate: "",
+      followUpReason: "",
+      notes: "",
+    });
   };
 
   return (
@@ -288,20 +343,28 @@ export default function DoctorAppointments() {
               >
                 <View style={styles.consultationHeader}>
                   <View style={styles.patientInfo}>
-                    <View style={styles.avatarContainer}>
-                      <Ionicons name="person" size={24} color="#06B6D4" />
-                    </View>
+                    <Image
+                      source={{
+                        uri: `https://picsum.photos/seed/${consultation.patientName}/200/200`,
+                      }}
+                      style={styles.avatarImage}
+                    />
                     <View style={styles.patientDetails}>
                       <View style={styles.patientNameRow}>
                         <Text style={styles.patientName}>
                           {consultation.patientName}
                         </Text>
-                        {consultation.status === "scheduled" && isConsultationSoon(consultation) && (
-                          <View style={styles.soonBadge}>
-                            <Ionicons name="alarm" size={12} color="#EF4444" />
-                            <Text style={styles.soonText}>მალე</Text>
-                          </View>
-                        )}
+                        {consultation.status === "scheduled" &&
+                          isConsultationSoon(consultation) && (
+                            <View style={styles.soonBadge}>
+                              <Ionicons
+                                name="alarm"
+                                size={12}
+                                color="#EF4444"
+                              />
+                              <Text style={styles.soonText}>მალე</Text>
+                            </View>
+                          )}
                       </View>
                       <Text style={styles.patientAge}>
                         {consultation.patientAge} წლის •{" "}
@@ -331,17 +394,20 @@ export default function DoctorAppointments() {
                 </View>
 
                 <View style={styles.consultationBody}>
-                  <View style={styles.infoRow}>
-                    <Ionicons
-                      name="calendar-outline"
-                      size={16}
-                      color="#6B7280"
-                    />
-                    <Text style={styles.infoText}>{consultation.date}</Text>
-                  </View>
-                  <View style={styles.infoRow}>
-                    <Ionicons name="time-outline" size={16} color="#6B7280" />
-                    <Text style={styles.infoText}>{consultation.time}</Text>
+                  <View style={styles.datetimeRow}>
+                    <View style={styles.infoRow}>
+                      <Ionicons
+                        name="calendar-outline"
+                        size={16}
+                        color="#6B7280"
+                      />
+                      <Text style={styles.infoText}>{consultation.date}</Text>
+                    </View>
+                    <View style={styles.divider} />
+                    <View style={styles.infoRow}>
+                      <Ionicons name="time-outline" size={16} color="#6B7280" />
+                      <Text style={styles.infoText}>{consultation.time}</Text>
+                    </View>
                   </View>
                   {consultation.symptoms && (
                     <View style={styles.symptomsRow}>
@@ -366,22 +432,37 @@ export default function DoctorAppointments() {
                 </View>
 
                 {/* Reminder & Join Call Section */}
-                {(consultation.status === "scheduled" || consultation.status === "in-progress") && (
+                {(consultation.status === "scheduled" ||
+                  consultation.status === "in-progress") && (
                   <View style={styles.reminderSection}>
                     {getTimeUntilConsultation(consultation) && (
-                      <View style={[
-                        styles.reminderBadge,
-                        isConsultationSoon(consultation) && styles.reminderBadgeUrgent
-                      ]}>
-                        <Ionicons 
-                          name={isConsultationSoon(consultation) ? "alarm" : "time-outline"} 
-                          size={16} 
-                          color={isConsultationSoon(consultation) ? "#EF4444" : "#F59E0B"} 
+                      <View
+                        style={[
+                          styles.reminderBadge,
+                          isConsultationSoon(consultation) &&
+                            styles.reminderBadgeUrgent,
+                        ]}
+                      >
+                        <Ionicons
+                          name={
+                            isConsultationSoon(consultation)
+                              ? "alarm"
+                              : "time-outline"
+                          }
+                          size={16}
+                          color={
+                            isConsultationSoon(consultation)
+                              ? "#EF4444"
+                              : "#F59E0B"
+                          }
                         />
-                        <Text style={[
-                          styles.reminderText,
-                          isConsultationSoon(consultation) && styles.reminderTextUrgent
-                        ]}>
+                        <Text
+                          style={[
+                            styles.reminderText,
+                            isConsultationSoon(consultation) &&
+                              styles.reminderTextUrgent,
+                          ]}
+                        >
                           {getTimeUntilConsultation(consultation)} დარჩა
                         </Text>
                         {isConsultationSoon(consultation) && (
@@ -392,7 +473,8 @@ export default function DoctorAppointments() {
                     <TouchableOpacity
                       style={[
                         styles.joinCallButton,
-                        isConsultationSoon(consultation) && styles.joinCallButtonPulsing
+                        isConsultationSoon(consultation) &&
+                          styles.joinCallButtonPulsing,
                       ]}
                       onPress={() => {
                         router.push({
@@ -409,7 +491,37 @@ export default function DoctorAppointments() {
                       <Text style={styles.joinCallText}>
                         შესვლა კონსულტაციაზე
                       </Text>
-                      <Ionicons name="arrow-forward" size={16} color="#FFFFFF" />
+                      <Ionicons
+                        name="arrow-forward"
+                        size={16}
+                        color="#FFFFFF"
+                      />
+                    </TouchableOpacity>
+                  </View>
+                )}
+
+                {/* Completed Action Buttons */}
+                {consultation.status === "completed" && (
+                  <View style={styles.completedButtonsRow}>
+                    <TouchableOpacity
+                      style={styles.appointmentButton}
+                      onPress={() => openAppointment(consultation)}
+                    >
+                      <Ionicons
+                        name="document-text"
+                        size={18}
+                        color="#8B5CF6"
+                      />
+                      <Text style={styles.appointmentText}>დანიშნულება</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={styles.followUpButton}
+                      onPress={() => openFollowUp(consultation)}
+                    >
+                      <Ionicons name="add-circle" size={18} color="#06B6D4" />
+                      <Text style={styles.followUpText}>
+                        განმეორებითი კონსულტაცია
+                      </Text>
                     </TouchableOpacity>
                   </View>
                 )}
@@ -438,17 +550,6 @@ export default function DoctorAppointments() {
                       </Text>
                     </View>
                   </View>
-                  {consultation.status === "completed" && (
-                    <TouchableOpacity
-                      style={styles.followUpButton}
-                      onPress={() => openFollowUp(consultation)}
-                    >
-                      <Ionicons name="add-circle" size={16} color="#06B6D4" />
-                      <Text style={styles.followUpText}>
-                        განმეორებითი ვიზიტი
-                      </Text>
-                    </TouchableOpacity>
-                  )}
                 </View>
               </TouchableOpacity>
             ))
@@ -655,6 +756,272 @@ export default function DoctorAppointments() {
           </View>
         </View>
       </Modal>
+
+      {/* Appointment Form Modal */}
+      <Modal
+        visible={showAppointmentModal}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setShowAppointmentModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <View>
+                <Text style={styles.modalTitle}>დანიშნულება</Text>
+                {selectedConsultation && (
+                  <Text style={styles.modalSubtitle}>
+                    {selectedConsultation.patientName}
+                  </Text>
+                )}
+              </View>
+              <TouchableOpacity
+                onPress={() => setShowAppointmentModal(false)}
+                style={styles.closeButton}
+              >
+                <Ionicons name="close" size={24} color="#6B7280" />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={styles.modalBody}>
+              {/* Diagnosis */}
+              <View style={styles.formSection}>
+                <Text style={styles.formLabel}>დიაგნოზი *</Text>
+                <TextInput
+                  style={styles.textInput}
+                  placeholder="მიუთითეთ დიაგნოზი"
+                  placeholderTextColor="#9CA3AF"
+                  value={appointmentData.diagnosis}
+                  onChangeText={(text) =>
+                    setAppointmentData({ ...appointmentData, diagnosis: text })
+                  }
+                />
+              </View>
+
+              {/* Symptoms */}
+              <View style={styles.formSection}>
+                <Text style={styles.formLabel}>სიმპტომები</Text>
+                <TextInput
+                  style={styles.textInput}
+                  placeholder="მიუთითეთ სიმპტომები"
+                  placeholderTextColor="#9CA3AF"
+                  multiline
+                  numberOfLines={3}
+                  value={appointmentData.symptoms}
+                  onChangeText={(text) =>
+                    setAppointmentData({ ...appointmentData, symptoms: text })
+                  }
+                />
+              </View>
+
+              {/* Vital Signs */}
+              <Text style={styles.sectionTitle}>ვიტალური ნიშნები</Text>
+              <View style={styles.formRow}>
+                <View style={styles.formFieldHalf}>
+                  <Text style={styles.formLabel}>არტერიული წნევა</Text>
+                  <TextInput
+                    style={styles.textInput}
+                    placeholder="120/80"
+                    placeholderTextColor="#9CA3AF"
+                    value={appointmentData.bloodPressure}
+                    onChangeText={(text) =>
+                      setAppointmentData({
+                        ...appointmentData,
+                        bloodPressure: text,
+                      })
+                    }
+                  />
+                </View>
+                <View style={styles.formFieldHalf}>
+                  <Text style={styles.formLabel}>გულის გახეთქვა</Text>
+                  <TextInput
+                    style={styles.textInput}
+                    placeholder="72 bpm"
+                    placeholderTextColor="#9CA3AF"
+                    value={appointmentData.heartRate}
+                    onChangeText={(text) =>
+                      setAppointmentData({
+                        ...appointmentData,
+                        heartRate: text,
+                      })
+                    }
+                  />
+                </View>
+              </View>
+              <View style={styles.formRow}>
+                <View style={styles.formFieldHalf}>
+                  <Text style={styles.formLabel}>ტემპერატურა</Text>
+                  <TextInput
+                    style={styles.textInput}
+                    placeholder="36.6°C"
+                    placeholderTextColor="#9CA3AF"
+                    value={appointmentData.temperature}
+                    onChangeText={(text) =>
+                      setAppointmentData({
+                        ...appointmentData,
+                        temperature: text,
+                      })
+                    }
+                  />
+                </View>
+                <View style={styles.formFieldHalf}>
+                  <Text style={styles.formLabel}>წონა</Text>
+                  <TextInput
+                    style={styles.textInput}
+                    placeholder="70 კგ"
+                    placeholderTextColor="#9CA3AF"
+                    value={appointmentData.weight}
+                    onChangeText={(text) =>
+                      setAppointmentData({ ...appointmentData, weight: text })
+                    }
+                  />
+                </View>
+              </View>
+
+              {/* Medications */}
+              <View style={styles.formSection}>
+                <Text style={styles.formLabel}>დანიშნული მედიკამენტები</Text>
+                <TextInput
+                  style={styles.textInput}
+                  placeholder="მაგ: ენალაპრილი 10მგ დღეში 1-ჯერ"
+                  placeholderTextColor="#9CA3AF"
+                  multiline
+                  numberOfLines={4}
+                  value={appointmentData.medications}
+                  onChangeText={(text) =>
+                    setAppointmentData({
+                      ...appointmentData,
+                      medications: text,
+                    })
+                  }
+                />
+              </View>
+
+              {/* Follow Up */}
+              <View style={styles.formSection}>
+                <TouchableOpacity
+                  style={styles.checkboxRow}
+                  onPress={() =>
+                    setAppointmentData({
+                      ...appointmentData,
+                      followUpRequired: !appointmentData.followUpRequired,
+                    })
+                  }
+                >
+                  <View
+                    style={[
+                      styles.checkbox,
+                      appointmentData.followUpRequired &&
+                        styles.checkboxChecked,
+                    ]}
+                  >
+                    {appointmentData.followUpRequired && (
+                      <Ionicons name="checkmark" size={16} color="#FFFFFF" />
+                    )}
+                  </View>
+                  <Text style={styles.checkboxLabel}>
+                    საჭიროა განმეორებითი ვიზიტი
+                  </Text>
+                </TouchableOpacity>
+
+                {appointmentData.followUpRequired && (
+                  <>
+                    <View style={styles.formSection}>
+                      <Text style={styles.formLabel}>თარიღი</Text>
+                      <TextInput
+                        style={styles.textInput}
+                        placeholder="2024-11-20"
+                        placeholderTextColor="#9CA3AF"
+                        value={appointmentData.followUpDate}
+                        onChangeText={(text) =>
+                          setAppointmentData({
+                            ...appointmentData,
+                            followUpDate: text,
+                          })
+                        }
+                      />
+                    </View>
+                    <View style={styles.formSection}>
+                      <Text style={styles.formLabel}>მიზეზი</Text>
+                      <TextInput
+                        style={styles.textInput}
+                        placeholder="მიუთითეთ მიზეზი"
+                        placeholderTextColor="#9CA3AF"
+                        multiline
+                        numberOfLines={2}
+                        value={appointmentData.followUpReason}
+                        onChangeText={(text) =>
+                          setAppointmentData({
+                            ...appointmentData,
+                            followUpReason: text,
+                          })
+                        }
+                      />
+                    </View>
+                  </>
+                )}
+              </View>
+
+              {/* Notes */}
+              <View style={styles.formSection}>
+                <Text style={styles.formLabel}>შენიშვნები</Text>
+                <TextInput
+                  style={styles.textInput}
+                  placeholder="დამატებითი ინფორმაცია..."
+                  placeholderTextColor="#9CA3AF"
+                  multiline
+                  numberOfLines={4}
+                  value={appointmentData.notes}
+                  onChangeText={(text) =>
+                    setAppointmentData({ ...appointmentData, notes: text })
+                  }
+                />
+              </View>
+            </ScrollView>
+
+            <View style={styles.modalFooter}>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.modalButtonSecondary]}
+                onPress={() => setShowAppointmentModal(false)}
+              >
+                <Text style={styles.modalButtonTextSecondary}>გაუქმება</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.modalButtonPrimary]}
+                onPress={handleSaveAppointment}
+              >
+                <Text style={styles.modalButtonTextPrimary}>შენახვა</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Success Modal */}
+      <Modal
+        visible={showSuccessModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowSuccessModal(false)}
+      >
+        <View style={styles.successModalOverlay}>
+          <View style={styles.successModalContent}>
+            <View style={styles.successModalIconContainer}>
+              <Ionicons name="checkmark-circle" size={64} color="#10B981" />
+            </View>
+            <Text style={styles.successModalTitle}>შენახულია</Text>
+            <Text style={styles.successModalMessage}>
+              დანიშნულება წარმატებით დამატებულია
+            </Text>
+            <TouchableOpacity
+              style={styles.successModalButton}
+              onPress={() => setShowSuccessModal(false)}
+            >
+              <Text style={styles.successModalButtonText}>კარგი</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -797,33 +1164,42 @@ const styles = StyleSheet.create({
   consultationCard: {
     backgroundColor: "#FFFFFF",
     borderRadius: 16,
-    padding: 16,
-    marginBottom: 12,
+    padding: 20,
+    marginBottom: 16,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
     elevation: 3,
   },
   consultationHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "flex-start",
-    marginBottom: 12,
+    marginBottom: 16,
   },
   patientInfo: {
     flexDirection: "row",
     alignItems: "center",
     flex: 1,
-    gap: 12,
+    gap: 14,
+  },
+  avatarImage: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    borderWidth: 2,
+    borderColor: "#06B6D4",
   },
   avatarContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: "#06B6D410",
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: "#E6FFFA",
     justifyContent: "center",
     alignItems: "center",
+    borderWidth: 2,
+    borderColor: "#06B6D4",
   },
   patientDetails: {
     flex: 1,
@@ -832,106 +1208,124 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
-    marginBottom: 2,
+    marginBottom: 4,
+    flexWrap: "wrap",
   },
   patientName: {
-    fontSize: 16,
-    fontFamily: "Poppins-SemiBold",
+    fontSize: 17,
+    fontFamily: "Poppins-Bold",
     color: "#1F2937",
   },
   soonBadge: {
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
     backgroundColor: "#FEE2E2",
-    borderRadius: 4,
+    borderRadius: 6,
   },
   soonText: {
-    fontSize: 10,
+    fontSize: 11,
     fontFamily: "Poppins-Bold",
     color: "#EF4444",
   },
   patientAge: {
-    fontSize: 12,
+    fontSize: 13,
     fontFamily: "Poppins-Regular",
     color: "#6B7280",
   },
   statusBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
   },
   statusText: {
-    fontSize: 11,
+    fontSize: 12,
     fontFamily: "Poppins-SemiBold",
   },
   consultationBody: {
-    gap: 8,
-    marginBottom: 12,
-    paddingBottom: 12,
+    gap: 10,
+    marginBottom: 16,
+    paddingBottom: 16,
     borderBottomWidth: 1,
     borderBottomColor: "#F3F4F6",
+  },
+  datetimeRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  divider: {
+    width: 1,
+    height: 16,
+    backgroundColor: "#E5E7EB",
   },
   infoRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
+    gap: 10,
   },
   infoText: {
     fontSize: 14,
-    fontFamily: "Poppins-Regular",
-    color: "#6B7280",
+    fontFamily: "Poppins-Medium",
+    color: "#4B5563",
   },
   symptomsRow: {
     flexDirection: "row",
     alignItems: "flex-start",
-    gap: 8,
-    backgroundColor: "#F9FAFB",
-    padding: 8,
-    borderRadius: 8,
+    gap: 10,
+    backgroundColor: "#FEF3C7",
+    padding: 12,
+    borderRadius: 10,
+    borderLeftWidth: 3,
+    borderLeftColor: "#F59E0B",
   },
   symptomsText: {
     flex: 1,
-    fontSize: 12,
+    fontSize: 13,
     fontFamily: "Poppins-Regular",
-    color: "#6B7280",
-    fontStyle: "italic",
+    color: "#92400E",
   },
   diagnosisRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
-    backgroundColor: "#F0FDF4",
-    padding: 8,
-    borderRadius: 8,
+    gap: 10,
+    backgroundColor: "#D1FAE5",
+    padding: 12,
+    borderRadius: 10,
+    borderLeftWidth: 3,
+    borderLeftColor: "#10B981",
   },
   diagnosisText: {
     flex: 1,
-    fontSize: 12,
+    fontSize: 13,
     fontFamily: "Poppins-Medium",
-    color: "#10B981",
+    color: "#065F46",
   },
   consultationFooter: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
+    gap: 12,
+    flexWrap: "wrap",
+    marginTop: 12,
   },
   feeRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
+    flex: 1,
   },
   feeAmount: {
-    fontSize: 16,
+    fontSize: 18,
     fontFamily: "Poppins-Bold",
     color: "#1F2937",
   },
   paymentBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
   },
   paymentBadgePaid: {
     backgroundColor: "#10B98120",
@@ -940,7 +1334,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#F59E0B20",
   },
   paymentText: {
-    fontSize: 10,
+    fontSize: 11,
     fontFamily: "Poppins-SemiBold",
   },
   paymentTextPaid: {
@@ -952,29 +1346,33 @@ const styles = StyleSheet.create({
   followUpButton: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    backgroundColor: "#06B6D410",
-    borderRadius: 8,
+    gap: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: "#E6FFFA",
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "#06B6D4",
   },
   followUpText: {
-    fontSize: 12,
-    fontFamily: "Poppins-Medium",
+    fontSize: 14,
+    fontFamily: "Poppins-SemiBold",
     color: "#06B6D4",
+    flexShrink: 1,
+    textAlign: "center",
   },
   reminderSection: {
     marginTop: 12,
-    gap: 8,
+    gap: 10,
   },
   reminderBadge: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    gap: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
     backgroundColor: "#FEF3C7",
-    borderRadius: 8,
+    borderRadius: 10,
     borderWidth: 1,
     borderColor: "#FCD34D",
   },
@@ -984,7 +1382,7 @@ const styles = StyleSheet.create({
   },
   reminderText: {
     flex: 1,
-    fontSize: 13,
+    fontSize: 14,
     fontFamily: "Poppins-SemiBold",
     color: "#D97706",
   },
@@ -992,23 +1390,23 @@ const styles = StyleSheet.create({
     color: "#DC2626",
   },
   urgentDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
+    width: 10,
+    height: 10,
+    borderRadius: 5,
     backgroundColor: "#EF4444",
   },
   joinCallButton: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 8,
-    paddingHorizontal: 20,
-    paddingVertical: 14,
+    gap: 10,
+    paddingHorizontal: 24,
+    paddingVertical: 16,
     backgroundColor: "#10B981",
     borderRadius: 12,
     shadowColor: "#10B981",
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.4,
+    shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 5,
   },
@@ -1017,7 +1415,7 @@ const styles = StyleSheet.create({
     shadowColor: "#EF4444",
   },
   joinCallText: {
-    fontSize: 14,
+    fontSize: 15,
     fontFamily: "Poppins-Bold",
     color: "#FFFFFF",
     letterSpacing: 0.5,
@@ -1177,5 +1575,121 @@ const styles = StyleSheet.create({
     color: "#1F2937",
     textAlignVertical: "top",
     minHeight: 100,
+  },
+  // New appointment form styles
+  completedButtonsRow: {
+    flexDirection: "column",
+    gap: 10,
+    width: "100%",
+    marginTop: 8,
+    marginBottom: 12,
+  },
+  appointmentButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    paddingHorizontal: 20,
+    paddingVertical: 14,
+    backgroundColor: "#F3E8FF",
+    borderRadius: 12,
+    justifyContent: "center",
+    borderWidth: 2,
+    borderColor: "#8B5CF6",
+  },
+  appointmentText: {
+    fontSize: 15,
+    fontFamily: "Poppins-SemiBold",
+    color: "#8B5CF6",
+  },
+  textInput: {
+    backgroundColor: "#F9FAFB",
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+    borderRadius: 12,
+    padding: 14,
+    fontSize: 14,
+    fontFamily: "Poppins-Regular",
+    color: "#1F2937",
+  },
+  formRow: {
+    flexDirection: "row",
+    gap: 12,
+    marginBottom: 16,
+  },
+  formFieldHalf: {
+    flex: 1,
+  },
+  checkboxRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  checkbox: {
+    width: 24,
+    height: 24,
+    borderRadius: 6,
+    borderWidth: 2,
+    borderColor: "#E5E7EB",
+    backgroundColor: "#FFFFFF",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  checkboxChecked: {
+    backgroundColor: "#06B6D4",
+    borderColor: "#06B6D4",
+  },
+  checkboxLabel: {
+    fontSize: 14,
+    fontFamily: "Poppins-Medium",
+    color: "#1F2937",
+  },
+  modalSubtitle: {
+    fontSize: 14,
+    fontFamily: "Poppins-Regular",
+    color: "#6B7280",
+    marginTop: 2,
+  },
+  // Success Modal Styles
+  successModalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  successModalContent: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 20,
+    padding: 32,
+    alignItems: "center",
+    marginHorizontal: 40,
+    minWidth: 280,
+  },
+  successModalIconContainer: {
+    marginBottom: 16,
+  },
+  successModalTitle: {
+    fontSize: 24,
+    fontFamily: "Poppins-Bold",
+    color: "#1F2937",
+    marginBottom: 12,
+  },
+  successModalMessage: {
+    fontSize: 16,
+    fontFamily: "Poppins-Regular",
+    color: "#6B7280",
+    textAlign: "center",
+    marginBottom: 24,
+  },
+  successModalButton: {
+    backgroundColor: "#10B981",
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 40,
+    minWidth: 120,
+  },
+  successModalButtonText: {
+    fontSize: 16,
+    fontFamily: "Poppins-SemiBold",
+    color: "#FFFFFF",
   },
 });

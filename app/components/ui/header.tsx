@@ -12,7 +12,7 @@ const Header = () => {
 
   const handleProfilePress = () => {
     if (isAuthenticated) {
-      router.push("/screens/profile/profile");
+      router.push("/(tabs)/settings");
     } else {
       router.push("/screens/auth/login");
     }
@@ -26,8 +26,12 @@ const Header = () => {
     <View style={styles.container}>
       <TouchableOpacity style={styles.header} onPress={handleProfilePress}>
         <Image
-          style={{ width: 44, height: 44, borderRadius: 100 }}
-          source={require("../../../assets/images/test.png")}
+          style={{ width: 44, height: 44, borderRadius: 22 }}
+          source={{
+            uri: `https://picsum.photos/seed/${
+              user?.name || "patient"
+            }/200/200`,
+          }}
         />
         <View>
           <Text style={{ color: "#171717", fontFamily: "Poppins-Medium" }}>

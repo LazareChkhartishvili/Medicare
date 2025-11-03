@@ -26,6 +26,8 @@ export default function ScreensLayout() {
 
       {/* Profile Routes */}
       <Stack.Screen name="profile/profile" />
+      <Stack.Screen name="profile/medical-records" />
+      <Stack.Screen name="profile/medical-cabinet" />
       <Stack.Screen name="profile/favourites" />
       <Stack.Screen name="profile/payment" />
       <Stack.Screen name="profile/newPayment" />

@@ -11,19 +11,15 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useAuth } from "../../contexts/AuthContext";
-import { showToast } from "../../utils/toast";
+import { useAuth } from "../contexts/AuthContext";
+import { showToast } from "../utils/toast";
 
-export default function ProfileScreen() {
+export default function SettingsScreen() {
   const { user, logout, isAuthenticated } = useAuth();
 
   const handleResetOnboarding = async () => {
     await AsyncStorage.removeItem("hasCompletedOnboarding");
     router.replace("/screens/auth/onboarding");
-  };
-
-  const handleGoBack = () => {
-    router.back();
   };
 
   const handleLogout = async () => {
@@ -51,12 +47,7 @@ export default function ProfileScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={handleGoBack} style={styles.backButton}>
-          <View style={styles.backButtonIcon}>
-            <Ionicons name="arrow-back" size={20} color="#06B6D4" />
-          </View>
-        </TouchableOpacity>
-        <Text style={styles.title}>Profile</Text>
+        <Text style={styles.title}>პარამეტრები</Text>
       </View>
 
       <ScrollView style={styles.scrollContainer}>
@@ -103,7 +94,7 @@ export default function ProfileScreen() {
         <View style={styles.menuSection}>
           <TouchableOpacity
             style={styles.menuItem}
-            onPress={() => router.push("/screens/profile/medical-records")}
+            onPress={() => router.push("/screens/profile/medical-cabinet")}
           >
             <View
               style={[styles.menuIconContainer, { backgroundColor: "#EFF6FF" }]}
@@ -254,26 +245,12 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     flexDirection: "row",
     alignItems: "center",
-  },
-  backButton: {
-    // marginRight: 15,
-  },
-  backButtonIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: "#E5E7EB",
     justifyContent: "center",
-    alignItems: "center",
   },
   title: {
     fontSize: 20,
-    marginRight: 40,
     fontFamily: "Poppins-Bold",
     color: "#1F2937",
-    flex: 1,
-    textAlign: "center",
   },
   profileSection: {
     alignItems: "center",
@@ -390,3 +367,4 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
 });
+
